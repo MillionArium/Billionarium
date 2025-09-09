@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {margin:0; font-family:system-ui,sans-serif; background:#111827; color:#e5e7eb;}
+    .app {max-width:1180px; margin:24px auto; padding:16px; display:grid; gap:16px; grid-template-columns:360px 1fr;}
+    .card {background:rgba(255,255,255,0.06); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:16px;}
+    h1 {font-size:20px; margin:0 0 8px;}
+    .preview-wrap {display:grid; place-items:center;}
+    .preview {width:744px; height:calc(744px*1.4142); background:#fff; color:#111; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.35); overflow:hidden; display:grid; grid-template-rows:auto 1fr auto;}
+    .header {padding:32px 40px 8px; text-align:center;}
+    .title {font-size:28px; font-weight:700;}
+    .art {margin:16px 24px; border-radius:20px; overflow:hidden; min-height:360px; display:grid; place-items:center; position:relative;}
+    .art img {width:100%; height:100%; object-fit:cover;}
+    .watermark {position:absolute; bottom:10px; right:12px; font-size:12px; font-weight:500; color:rgba(255,255,255,0.4); text-shadow:none; pointer-events:none;}
+    .note {padding:18px 28px 28px; margin:0 24px 28px; background:#fafafa; border:1px solid #e5e7eb; border-radius:16px; min-height:120px; white-space:pre-wrap; line-height:1.42; font-size:16px; color:#111;}
+    .footer {padding:0 28px 28px; font-size:12px; color:#64748b; text-align:right;}
+    .grid-templates {display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+    .tpl {position:relative; border-radius:12px; overflow:hidden; height:64px; cursor:pointer; border:2px solid transparent;}
+    .tpl.selected {border-color:#3b82f6;}
+    .tpl img {width:100%; height:100%; object-fit:cover; display:block;}
+    textarea {width:100%; min-height:140px; resize:vertical; border-radius:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(17,24,39,0.55); color:#f8fafc; padding:12px 14px; font-size:14px;}
+    input[type=text] {width:100%; border-radius:12px; border:1px solid rgba(255,255,255,0.2); padding:8px 10px; margin-top:6px; font-size:14px; display:block;}
+    .row {display:flex; gap:10px; align-items:center;}
+    .button {background:#3b82f6; color:white; border:0; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer;}
+    .muted {color:#cbd5e1; font-size:12px;}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section class="card">
+    <h1>Creator</h1>
+    <p>Choose one of the 36 images and enter a note (up to 600 characters). Then click ‘Download PDF.</p>
+
+    <!-- Wybór zdjęcia -->
+    <div>
+      <label>1) Pictures galery</label>
+      <div id="templates" class="grid-templates"></div>
+    </div>
+
+    <!-- Wybór tytułu dokumentu -->
+    <div style="margin-top:12px;">
+      <label for="titleSelect">2) Document type</label>
+      <select id="titleSelect">
+        <option>Gratitude Note</option>
+        <option>Birthday Note</option>
+        <option>Achievement Award</option>
+        <option>Congratulations Note</option>
+        <option>Love Note</option>
+        <option>Friendship Note</option>
+        <option>Inspiration Note</option>
+        <option>Custom</option>
+      </select>
+      <input id="customTitle" type="text" maxlength="20" placeholder="Wpisz własny tytuł" style="display:none;" />
+    </div>
+
+    <!-- Notatka -->
+    <div style="margin-top:12px;">
+      <label for="noteInput">3) Your note</label>
+     <textarea id="noteInput" maxlength="600" placeholder="Write a dedication, motto, or longer message…"></textarea>
+
+      <div id="counter" class="muted">0 / 600</div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button id="downloadBtn" class="button" type="button">Download PDF</button>
+      <span class="muted">PDF A4 format</span>
+    </div>
+  </section>
+
+  <!-- Podgląd -->
+  <section class="card preview-wrap">
+    <div id="certificate" class="preview">
+      <div class="header">
+        <div class="title">Your title</div>
+      </div>
+      <div id="art" class="art">
+        <img id="galleryImg" src="" alt="Ilustracja" />
+        <div class="watermark">@photo by Weronika Macioszczyk</div>
+      </div>
+      <div id="note" class="note">Your note will appear here…</div>
+      <div class="footer">© Billionarium</div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Galeria zdjęć – tutaj możesz podmienić linki na swoje
+  const gallery = [
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757435597/14524401_1839444226287245_7256871786025053424_o_x5ghjw.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757433987/8_h3xyg1_yp7odx.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757433986/16_dq8yq4_kapt0h.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757433573/DSC_0117.NEF_iwfoye_z1fmsh.jpg',
+
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757437974/IMG_20230507_094659_ips8pm.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757416745/IMG_20230304_170351_197_om2hlz.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757416476/IMG_20230304_170351_463_yswbjq.jpg',
+   'https://res.cloudinary.com/djom96coc/image/upload/v1757437149/IMAG7281_naw5xx.jpg',
+
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757337568/DSC_0174.NEF_pkwjs5_1_bsevqv.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757337473/DSC_4410.NEF_kai8pa_1_efanku.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757326326/9_ap2vfo_1_mz9qpp.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757438844/5_mp3teg_1_mwwazi_c8lkmx.jpg',
+
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757438901/IMG_20180806_211945_801_tevtgj.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757439039/2_ss7v25_1_rm9puz_hgyazv.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757439162/12_g63hfp_1_ujchxt_ex5hff.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757434720/14_cghh8h_jv8yst.jpg',
+    
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757438280/24_z0bbte_1_zwcrrz_xfiqz9.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757438359/53_37_N_10_12_W_r6tu6g_jpe3fe.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757436953/2017-09-12_17.30.58_id9nu0.jpg',
+    'https://res.cloudinary.com/djom96coc/image/upload/v1757437149/IMAG7281_naw5xx.jpg',
+    
+  ];
+
+  const tplContainer = document.getElementById('templates');
+  const galleryImg = document.getElementById('galleryImg');
+
+  gallery.forEach((src, idx) => {
+    const div = document.createElement('div');
+    div.className = 'tpl';
+    div.innerHTML = `<img src="${src}" alt="miniatura" />`;
+    div.addEventListener('click', () => selectImg(idx));
+    tplContainer.appendChild(div);
+  });
+
+  function selectImg(index) {
+    document.querySelectorAll('.tpl').forEach((el,i)=>{
+      el.classList.toggle('selected', i===index);
+    });
+    galleryImg.src = gallery[index];
+  }
+  selectImg(0);
+
+  // Notatka
+  const noteInput = document.getElementById('noteInput');
+  const noteOut = document.getElementById('note');
+  const counter = document.getElementById('counter');
+
+  noteInput.addEventListener('input', ()=>{
+    const val = noteInput.value.slice(0,600);
+    noteOut.textContent = val.length ? val : 'Your note will appear here…';
+    counter.textContent = `${val.length} / 600`;
+  });
+
+  // Nagłówek – wybór typu dokumentu
+  const titleSelect = document.getElementById('titleSelect');
+  const customTitle = document.getElementById('customTitle');
+  const titlePreview = document.querySelector('#certificate .title');
+
+  titleSelect.addEventListener('change', ()=>{
+    if(titleSelect.value==='Custom'){
+      customTitle.style.display='block';
+      titlePreview.textContent = customTitle.value || 'Your title';
+    } else {
+      customTitle.style.display='none';
+      titlePreview.textContent = titleSelect.value;
+    }
+  });
+
+  customTitle.addEventListener('input', ()=>{
+    titlePreview.textContent = customTitle.value || 'Your title';
+  });
+
+  // Pobierz PDF
+  const { jsPDF } = window.jspdf;
+  document.getElementById('downloadBtn').addEventListener('click', async ()=>{
+    const node = document.getElementById('certificate');
+    const canvas = await html2canvas(node, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    pdf.addImage(imgData, 'PNG', 0,0, pageWidth, pageHeight);
+    pdf.save('dyplom.pdf');
+  });
+</script>
+</body>
+</html>  
