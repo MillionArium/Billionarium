@@ -35,7 +35,7 @@
 <div class="app">
   <section class="card">
     <h1>Creator</h1>
-    <p>Choose one of the 36 images and enter a note (up to 600 characters). Then click ‘Download PDF.</p>
+    <p>Choose one of the 20 images and enter a note (up to 600 characters). Then click ‘Download PDF.</p>
 
     <!-- Wybór zdjęcia -->
     <div>
